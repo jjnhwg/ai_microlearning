@@ -17,6 +17,10 @@ _ALLOWED_CONTENT_TYPES = {
     "audio/m4a", "audio/x-m4a",
 }
 
+
+'''
+upload an audio file and in return get an s3 key that is associated with that bucke 
+'''
 @router.post("/upload")
 async def upload_recording(audio: UploadFile) -> dict:
     if audio.content_type not in _ALLOWED_CONTENT_TYPES:
