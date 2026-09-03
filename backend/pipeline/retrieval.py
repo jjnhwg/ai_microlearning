@@ -2,12 +2,15 @@
 
 See docs/PLAN.md "Retrieval design". Retrieval here is driven by the
 deterministic metrics produced by features.analyze(), NOT by a user query.
-This module only defines (1) the shape of a tagged corpus chunk and (2) the
+This module only defines (1) the shape of a tagged corpus chunk, (2) the
 deterministic mapping from computed metrics to the criterion tags we should
-retrieve. No corpus text, no embeddings, no database yet — those are later steps.
+retrieve, and (3) a loader for the small hand-picked seed corpus. No embeddings,
+no database, no tag->chunk search yet — those are later steps.
 """
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 # The four per-criterion tags every corpus chunk is labeled with. A chunk about
 # um/uh disfluencies is tagged "fillers"; a Toastmasters pacing rubric line is
@@ -86,3 +89,30 @@ class RetrievalChunk:
             seen.add(tag)
             ordered.append(tag)
     return ordered
+
+
+# Default location of the hand-picked seed corpus, next to this module.
+_SEED_PATH = Path(__file__).with_name("seed_corpus.json")
+
+
+# TODO (you): write the function signature ->
+#   def load_seed_corpus(path: Path = _SEED_PATH) -> list[RetrievalChunk]:
+    """Load the seed corpus JSON into validated RetrievalChunk objects.
+
+    path: JSON file holding a list of chunk records. Each RetrievalChunk is
+    constructed here, so a record with an invalid `criterion` fails fast at load
+    time rather than silently entering the corpus. Later steps swap this seed
+    file for a larger ingested corpus without changing the loader.
+    """
+    with open(path, encoding="utf-8") as f:
+        records = json.load(f)
+    return [
+        RetrievalChunk(
+            chunk_id=record["chunk_id"],
+            text=record["text"],
+            criterion=record["criterion"],
+            source=record["source"],
+            source_url=record.get("source_url"),
+        )
+        for record in records
+    ]

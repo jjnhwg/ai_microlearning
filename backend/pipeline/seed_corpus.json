@@ -1,0 +1,44 @@
+[
+  {
+    "chunk_id": "fillers-01",
+    "text": "Filler words such as 'um', 'uh', and 'like' are speech disfluencies. Frequent use tends to lower listeners' perception of a speaker's confidence and competence, even when the content is strong.",
+    "criterion": "fillers",
+    "source": "Communication research — speech disfluency perception (placeholder paraphrase)",
+    "source_url": null
+  },
+  {
+    "chunk_id": "fillers-02",
+    "text": "A practical technique for reducing fillers is to replace them with a brief silent pause. Pausing gives the speaker time to think and the audience time to absorb, without signalling hesitation the way a filler does.",
+    "criterion": "fillers",
+    "source": "Toastmasters International — reducing filler words (placeholder paraphrase)",
+    "source_url": null
+  },
+  {
+    "chunk_id": "fillers-03",
+    "text": "Filler frequency rises under cognitive load and nervousness. Rehearsing transitions between points — the moments where fillers cluster — measurably reduces their rate.",
+    "criterion": "fillers",
+    "source": "Communication research — disfluency and cognitive load (placeholder paraphrase)",
+    "source_url": null
+  },
+  {
+    "chunk_id": "pacing-01",
+    "text": "A conversational speaking rate of roughly 120 to 150 words per minute is generally comfortable for listeners to follow. Sustained rates well above this can outpace comprehension.",
+    "criterion": "pacing",
+    "source": "Toastmasters International — vocal delivery and pace (placeholder paraphrase)",
+    "source_url": null
+  },
+  {
+    "chunk_id": "pacing-02",
+    "text": "Speaking too slowly can reduce perceived energy and let attention drift, while speaking too quickly can bury key points. Varying pace intentionally — slowing for emphasis — is more effective than a single constant speed.",
+    "criterion": "pacing",
+    "source": "Communication research — speech rate and comprehension (placeholder paraphrase)",
+    "source_url": null
+  },
+  {
+    "chunk_id": "pacing-03",
+    "text": "Strategic pauses are part of good pacing. A short pause before or after an important point increases its impact and gives listeners a moment to process, whereas many long unplanned pauses can signal loss of structure.",
+    "criterion": "pacing",
+    "source": "Toastmasters International — pauses and pacing (placeholder paraphrase)",
+    "source_url": null
+  }
+]
