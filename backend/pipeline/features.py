@@ -81,7 +81,7 @@ def words_per_minute(words: list[dict], window_s: float = 15.0, step_s: float = 
     return {"overall_wpm": overall_wpm, "windows": windows}
 
 
-# def find_pauses(words: list[dict], min_pause_s: float = 0.5) -> dict:
+def find_pauses(words: list[dict], min_pause_s: float = 0.5) -> dict:
     """Detect silent gaps between consecutive words.
 
     words: list of {word, start, end, ...} from transcribe().
@@ -105,4 +105,18 @@ def words_per_minute(words: list[dict], window_s: float = 15.0, step_s: float = 
         "count": len(pauses),
         "total_duration": total_duration,
         "pauses": pauses,
+    }
+
+
+def analyze(transcript: dict) -> dict:
+    """Run all deterministic speech features on a transcribe() result.
+
+    transcript: the dict returned by transcribe() -> {text, language, words, ...}.
+    Returns one metrics object combining fillers, words-per-minute, and pauses.
+    """
+    words = transcript.get("words", [])
+    return {
+        "fillers": count_fillers(words),
+        "wpm": words_per_minute(words),
+        "pauses": find_pauses(words),
     }

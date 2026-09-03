@@ -25,3 +25,12 @@ adding the logic for a wpm how many words you are saying per section
 - and then we have 15 second window that tracks the wpm 
 - so if in that mid point number there are a lot of numbers within that 15 sec range
 - your wpm are higher
+added pauses
+added a method to combine all the methods above
+
+
+added reterival chunck whcih is basically a class that holds a certain structure of 
+which reterival to get
+
+added a tag method in which based off the metrics of your speech if something goes off
+lets say wpm was too high over the threshold or if wpm was below the threshold it attaches a tag
