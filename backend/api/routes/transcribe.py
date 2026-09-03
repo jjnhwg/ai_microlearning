@@ -1,19 +1,22 @@
 from botocore.exceptions import ClientError
-from fastapi import HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backend.pipeline.transcribe import transcribe
 
-# TODO (you): create the router -> router = APIRouter(prefix=..., tags=[...])
-# TODO (you): add the route decorator + endpoint function (name it what you want).
-#             have it take a TranscribeRequest body and return transcribe_recording(body.s3_key)
+
+router = APIRouter(prefix="/recordings", tags=["recordings"])
+
 
 
 class TranscribeRequest(BaseModel):
     s3_key: str
 
 
-def transcribe_recording(s3_key: str) -> dict:
+
+@router.post("/transcribe")
+async def transcribe_recording(body: TranscribeRequest) -> dict:
+    s3_key = body.s3_key
     """Transcribe an already-uploaded recording (by its s3 key), word-level, synchronously."""
     try:
         return transcribe(s3_key)
