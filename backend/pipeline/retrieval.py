@@ -45,15 +45,14 @@ class RetrievalChunk:
             )
 
 
-# TODO (you): write the function signature ->
-#   def triggers_from_metrics(
-#       analysis: dict,
-#       *,
-#       filler_rate_max: float = 6.0,
-#       slow_wpm: float = 110.0,
-#       fast_wpm: float = 160.0,
-#       min_pauses_for_pacing: int = 3,
-#   ) -> list[str]:
+def triggers_from_metrics(
+    analysis: dict,
+    *,
+    filler_rate_max: float = 6.0,
+    slow_wpm: float = 110.0,
+    fast_wpm: float = 160.0,
+    min_pauses_for_pacing: int = 3,
+) -> list[str]:
     """Map computed speech metrics to the criterion tags worth retrieving.
 
     analysis: the dict returned by features.analyze() -> {fillers, wpm, pauses}.
@@ -95,8 +94,7 @@ class RetrievalChunk:
 _SEED_PATH = Path(__file__).with_name("seed_corpus.json")
 
 
-# TODO (you): write the function signature ->
-#   def load_seed_corpus(path: Path = _SEED_PATH) -> list[RetrievalChunk]:
+def load_seed_corpus(path: Path = _SEED_PATH) -> list[RetrievalChunk]:
     """Load the seed corpus JSON into validated RetrievalChunk objects.
 
     path: JSON file holding a list of chunk records. Each RetrievalChunk is
@@ -116,3 +114,38 @@ _SEED_PATH = Path(__file__).with_name("seed_corpus.json")
         )
         for record in records
     ]
+
+
+def select_chunks(
+    tags: list[str],
+    corpus: list[RetrievalChunk],
+    *,
+    per_tag_limit: int | None = None,
+) -> list[RetrievalChunk]:
+    """Grab the corpus chunks that match the triggered criterion tags.
+
+    This is the tag->chunk step: `triggers_from_metrics()` decides *which*
+    criteria fired, and this turns those criteria into the actual passages the
+    feedback layer can cite. Still deterministic — no embeddings or ranking yet;
+    a chunk is selected purely because its `criterion` matches a fired tag.
+
+    tags: criterion tags from triggers_from_metrics(), e.g. ["fillers", "pacing"].
+        Order is honoured so results are stable and testable.
+    corpus: loaded chunks from load_seed_corpus().
+    per_tag_limit: optional cap on how many chunks to return per tag (in corpus
+        order), so the generation step isn't handed the whole corpus. None = all.
+
+    Returns a flat list of RetrievalChunk, grouped by tag order then corpus order,
+    with no duplicates even if a tag repeats.
+    """
+    selected: list[RetrievalChunk] = []
+    seen_ids: set[str] = set()
+    for tag in tags:
+        matches = [c for c in corpus if c.criterion == tag]
+        if per_tag_limit is not None:
+            matches = matches[:per_tag_limit]
+        for chunk in matches:
+            if chunk.chunk_id not in seen_ids:
+                seen_ids.add(chunk.chunk_id)
+                selected.append(chunk)
+    return selected

@@ -3,6 +3,7 @@ from backend.pipeline.retrieval import (
     CRITERIA,
     RetrievalChunk,
     load_seed_corpus,
+    select_chunks,
     triggers_from_metrics,
 )
 
@@ -67,6 +68,37 @@ def test_invalid_criterion_rejected():
         raise AssertionError("expected ValueError for invalid criterion")
 
 
+def test_select_chunks_returns_only_matching_tags():
+    corpus = load_seed_corpus()
+    chunks = select_chunks(["fillers"], corpus)
+    assert chunks and all(c.criterion == "fillers" for c in chunks)
+
+
+def test_select_chunks_empty_tags_returns_nothing():
+    assert select_chunks([], load_seed_corpus()) == []
+
+
+def test_select_chunks_preserves_tag_order():
+    corpus = load_seed_corpus()
+    chunks = select_chunks(["pacing", "fillers"], corpus)
+    criteria = [c.criterion for c in chunks]
+    # all pacing chunks come before any fillers chunk
+    assert criteria == sorted(criteria, key=lambda c: ["pacing", "fillers"].index(c))
+
+
+def test_select_chunks_per_tag_limit():
+    corpus = load_seed_corpus()
+    chunks = select_chunks(["fillers", "pacing"], corpus, per_tag_limit=1)
+    assert len(chunks) == 2  # one per tag
+
+
+def test_select_chunks_dedupes_repeated_tag():
+    corpus = load_seed_corpus()
+    once = select_chunks(["fillers"], corpus)
+    twice = select_chunks(["fillers", "fillers"], corpus)
+    assert once == twice
+
+
 if __name__ == "__main__":
     test_high_fillers_only()
     test_fast_wpm_triggers_pacing()
@@ -77,4 +109,9 @@ if __name__ == "__main__":
     test_pacing_not_duplicated()
     test_seed_corpus_loads_and_is_valid()
     test_invalid_criterion_rejected()
+    test_select_chunks_returns_only_matching_tags()
+    test_select_chunks_empty_tags_returns_nothing()
+    test_select_chunks_preserves_tag_order()
+    test_select_chunks_per_tag_limit()
+    test_select_chunks_dedupes_repeated_tag()
     print("all retrieval tests passed")
