@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SpeakSharp</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           max-width: 760px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    h1 { margin-bottom: 0.25rem; }
+    .sub { color: #666; margin-top: 0; }
+    .card { border: 1px solid #8884; border-radius: 10px; padding: 1rem 1.25rem; margin: 1rem 0; }
+    button { font: inherit; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #8886;
+             background: #2563eb; color: #fff; cursor: pointer; }
+    button.secondary { background: transparent; color: inherit; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .status { color: #666; font-size: 0.9rem; }
+    .insight { border-left: 3px solid #2563eb; padding: 0.5rem 0.9rem; margin: 0.75rem 0; }
+    .insight h3 { margin: 0 0 0.25rem; text-transform: capitalize; }
+    .cite { font-size: 0.85rem; color: #666; margin-top: 0.4rem; }
+    .cite a { color: inherit; }
+    .badge { display: inline-block; font-size: 0.75rem; padding: 0.1rem 0.5rem;
+             border-radius: 999px; background: #2563eb22; margin-left: 0.5rem; }
+    .ok { color: #15803d; } .bad { color: #b91c1c; }
+    pre { white-space: pre-wrap; word-break: break-word; font-size: 0.8rem; }
+    audio { width: 100%; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>SpeakSharp</h1>
+  <p class="sub">Record or upload a short talk. Every number in your feedback is measured from your own audio and every tip is cited.</p>
+
+  <div class="card">
+    <div class="row">
+      <button id="recBtn">● Record</button>
+      <button id="stopBtn" class="secondary" disabled>■ Stop</button>
+      <span>or</span>
+      <input id="fileInput" type="file" accept="audio/*" />
+    </div>
+    <audio id="player" controls hidden></audio>
+    <p class="status" id="status">Ready.</p>
+    <button id="analyzeBtn" disabled>Analyze</button>
+  </div>
+
+  <div id="report"></div>
+
+  <script>
+    const recBtn = document.getElementById('recBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const fileInput = document.getElementById('fileInput');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const player = document.getElementById('player');
+    const statusEl = document.getElementById('status');
+    const reportEl = document.getElementById('report');
+
+    let mediaRecorder, chunks = [], audioBlob = null;
+
+    function setBlob(blob, label) {
+      audioBlob = blob;
+      player.src = URL.createObjectURL(blob);
+      player.hidden = false;
+      analyzeBtn.disabled = false;
+      statusEl.textContent = label;
+    }
+
+    recBtn.onclick = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        chunks = [];
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop());
+          setBlob(new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' }), 'Recording ready.');
+        };
+        mediaRecorder.start();
+        recBtn.disabled = true; stopBtn.disabled = false;
+        statusEl.textContent = 'Recording…';
+      } catch (err) {
+        statusEl.textContent = 'Microphone unavailable: ' + err.message;
+      }
+    };
+
+    stopBtn.onclick = () => {
+      mediaRecorder && mediaRecorder.stop();
+      recBtn.disabled = false; stopBtn.disabled = true;
+    };
+
+    fileInput.onchange = () => {
+      if (fileInput.files[0]) setBlob(fileInput.files[0], 'File selected: ' + fileInput.files[0].name);
+    };
+
+    analyzeBtn.onclick = async () => {
+      if (!audioBlob) return;
+      analyzeBtn.disabled = true;
+      reportEl.innerHTML = '';
+      try {
+        statusEl.textContent = 'Uploading…';
+        const fd = new FormData();
+        fd.append('audio', audioBlob, 'recording.webm');
+        const up = await fetch('/recordings/upload', { method: 'POST', body: fd });
+        if (!up.ok) throw new Error('Upload failed (' + up.status + '). ' + await up.text());
+        const { s3_key } = await up.json();
+
+        statusEl.textContent = 'Transcribing and analyzing (this can take a bit)…';
+        const rep = await fetch('/recordings/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ s3_key })
+        });
+        const data = await rep.json();
+        if (!rep.ok) throw new Error(JSON.stringify(data.detail || data));
+        renderReport(data);
+        statusEl.textContent = 'Done.';
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + err.message;
+      } finally {
+        analyzeBtn.disabled = false;
+      }
+    };
+
+    function renderReport(data) {
+      const v = data.validation || {};
+      const badge = v.ok
+        ? '<span class="badge ok">numbers verified</span>'
+        : '<span class="badge bad">validation failed</span>';
+      let html = '<div class="card"><p>' + (data.report?.summary || '') + badge + '</p>';
+      for (const ins of (data.report?.insights || [])) {
+        const cites = (ins.citations || []).map(c =>
+          '<div class="cite">Source: ' +
+          (c.source_url ? '<a href="' + c.source_url + '" target="_blank" rel="noopener">' + c.source + '</a>' : c.source) +
+          '</div>').join('');
+        html += '<div class="insight"><h3>' + ins.criterion + '</h3><p>' + ins.message + '</p>' + cites + '</div>';
+      }
+      if (!(data.report?.insights || []).length) {
+        html += '<p>No coaching thresholds were triggered — nice work.</p>';
+      }
+      html += '<details><summary>Raw metrics</summary><pre>' +
+              JSON.stringify(data.analysis, null, 2) + '</pre></details></div>';
+      reportEl.innerHTML = html;
+    }
+  </script>
+</body>
+</html>

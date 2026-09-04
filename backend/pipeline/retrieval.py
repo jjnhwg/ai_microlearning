@@ -8,6 +8,8 @@ retrieve, and (3) a loader for the small hand-picked seed corpus. No embeddings,
 no database, no tag->chunk search yet — those are later steps.
 """
 
+from __future__ import annotations
+
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -45,15 +47,14 @@ class RetrievalChunk:
             )
 
 
-# TODO (you): write the function signature ->
-#   def triggers_from_metrics(
-#       analysis: dict,
-#       *,
-#       filler_rate_max: float = 6.0,
-#       slow_wpm: float = 110.0,
-#       fast_wpm: float = 160.0,
-#       min_pauses_for_pacing: int = 3,
-#   ) -> list[str]:
+def triggers_from_metrics(
+    analysis: dict,
+    *,
+    filler_rate_max: float = 6.0,
+    slow_wpm: float = 110.0,
+    fast_wpm: float = 160.0,
+    min_pauses_for_pacing: int = 3,
+) -> list[str]:
     """Map computed speech metrics to the criterion tags worth retrieving.
 
     analysis: the dict returned by features.analyze() -> {fillers, wpm, pauses}.
@@ -95,8 +96,7 @@ class RetrievalChunk:
 _SEED_PATH = Path(__file__).with_name("seed_corpus.json")
 
 
-# TODO (you): write the function signature ->
-#   def load_seed_corpus(path: Path = _SEED_PATH) -> list[RetrievalChunk]:
+def load_seed_corpus(path: Path = _SEED_PATH) -> list[RetrievalChunk]:
     """Load the seed corpus JSON into validated RetrievalChunk objects.
 
     path: JSON file holding a list of chunk records. Each RetrievalChunk is
@@ -116,3 +116,31 @@ _SEED_PATH = Path(__file__).with_name("seed_corpus.json")
         )
         for record in records
     ]
+
+
+def retrieve(
+    tags: list[str],
+    corpus: list[RetrievalChunk] | None = None,
+    *,
+    per_tag: int = 2,
+) -> list[RetrievalChunk]:
+    """Return the corpus chunks that back the triggered criterion tags.
+
+    tags: criterion tags from triggers_from_metrics() (e.g. ["fillers", "pacing"]).
+    corpus: chunks to search; loads the seed corpus when omitted.
+    per_tag: max chunks returned per tag, ordered as they appear in the corpus.
+
+    This is the deterministic, query-free retrieval the plan calls for: selection
+    is driven purely by which criteria the metrics triggered, never by user text.
+    Full hybrid BM25+dense+reranker is a later step; here a stable tag filter over
+    the small seed corpus keeps the vertical runnable and its output reproducible.
+    Results preserve `tags` order so downstream feedback is deterministic.
+    """
+    if corpus is None:
+        corpus = load_seed_corpus()
+
+    selected: list[RetrievalChunk] = []
+    for tag in tags:
+        matches = [c for c in corpus if c.criterion == tag]
+        selected.extend(matches[:per_tag])
+    return selected
