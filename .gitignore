@@ -5,6 +5,6 @@ __pycache__/
 *.egg-info/
 dist/
 .pytest_cache/
-things i learned.md
+thingsilearned.md
 DECISIONS.md
 flashcards.md
